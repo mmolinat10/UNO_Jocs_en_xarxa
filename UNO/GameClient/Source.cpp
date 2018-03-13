@@ -9,17 +9,6 @@
 
 #define MAX_MESSAGES 30
 
-struct Direction {
-	std::string ip;
-	unsigned short port;
-
-	Direction::Direction() {}
-	Direction::Direction(std::string ip, unsigned short port) {
-		this->ip = ip;
-		this->port = port;
-	}
-};
-
 void Receive(std::vector<sf::TcpSocket*> socket, std::vector<std::string>* messages, sf::SocketSelector* ss) {
 
 	std::string msn;

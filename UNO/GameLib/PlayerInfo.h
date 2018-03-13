@@ -1,6 +1,17 @@
 #pragma once
 #include <SFML\Graphics.hpp>
 
+struct Direction {
+	std::string ip;
+	unsigned short port;
+
+	Direction::Direction() {}
+	Direction::Direction(std::string ip, unsigned short port) {
+		this->ip = ip;
+		this->port = port;
+	}
+};
+
 class PlayerInfo
 {
 	std::string name;

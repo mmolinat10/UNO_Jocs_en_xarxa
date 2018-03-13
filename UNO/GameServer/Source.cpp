@@ -10,17 +10,6 @@
 
 #define MAX_CLIENTS 4
 
-struct Direction {
-	std::string ip;
-	unsigned short port;
-
-	Direction::Direction() {}
-	Direction::Direction(std::string ip, unsigned short port) {
-		this->ip = ip;
-		this->port = port;
-	}
-};
-
 int main() {
 
 	PlayerInfo playerInfo;
