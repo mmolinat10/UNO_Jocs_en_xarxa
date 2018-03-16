@@ -41,7 +41,7 @@ int main() {
 
 			// check if it's listener
 			if (sSelector.isReady(listener)) {
-				if (sList.size < 4) {
+				if (sList.size() < 4) {
 					sf::TcpSocket* socket = new sf::TcpSocket();
 					sf::TcpListener::Status st = listener.accept(*socket);
 					if (st == sf::TcpListener::Status::Done) {
@@ -51,20 +51,20 @@ int main() {
 
 					sSelector.add(*socket);
 
-					message = "Se ha conectado el cliente " + std::to_string(userNum) + "!";
-					for (sf::TcpSocket* s : sList)
-						if (s != socket)s->send(message.c_str(), message.size() + 1);
-
 					std::cout << "Se ha conectado el cliente " + std::to_string(userNum) + "!" << std::endl;
 					userNum++;
 				}
 				else {
-					std::cout << "Ya hay 4 jugadores connectados, esperate a que termine de jugar alguien " << std::endl;
+					message = "Empieza la partida!";
+					for (sf::TcpSocket* s : sList)
+						s->send(message.c_str(), message.size() + 1);
+					
+					listener.close();
 				}
 				
 			}
 
-			// if not listener, socket
+			// despues del mensaje de bienvenida, procedemos a recibir mensajes de clientes i a enviarlo a todos
 			else {
 
 				for (int i = 0; i < sList.size(); i++) {

@@ -11,7 +11,10 @@
 #define DEFAULT_PORT 5000
 std::mutex mutex;
 
-void Receive(sf::TcpSocket* socket, size_t* received, std::vector<std::string>* messages, sf::RenderWindow* window) {
+void UNOGame(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received);
+void Chat(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received);
+
+void ReceiveChat(sf::TcpSocket* socket, size_t* received, std::vector<std::string>* messages, sf::RenderWindow* window) {
 
 	while (window->isOpen()) {
 		char buffer[2000];
@@ -28,15 +31,71 @@ void Receive(sf::TcpSocket* socket, size_t* received, std::vector<std::string>* 
 	}
 }
 
+void ReceiveUNOGame(sf::TcpSocket* socket, size_t* received) {
+	
+	bool endGame = false;
+	
+
+	while (!endGame) {
+		char buffer[2000];
+		sf::Socket::Status status = socket->receive(buffer, sizeof(buffer), *received);
+		std::string str = buffer;
+		
+		if (status == sf::Socket::Status::Done) {
+			mutex.lock();
+
+			std::cout << str << std::endl;
+			mutex.unlock();
+		}
+		
+	}
+	
+	
+	
+}
+
 int main() {
 
 	PlayerInfo playerInfo;
-
+	sf::TcpSocket::Status socketStatus = sf::TcpSocket::Status::NotReady;
 	sf::TcpSocket socket;
-	sf::TcpSocket::Status socketStatus;
+	socket.setBlocking(false);
+
 	size_t received;
 	sf::IpAddress ip = sf::IpAddress::getLocalAddress(); // ip local
 	socket.connect(ip, DEFAULT_PORT);
+
+	UNOGame(socketStatus, &socket, &received);
+	//std::thread threadUNOChat(Chat, socketStatus, &socket, &received);
+	
+	
+	//Chat(socketStatus, &socket, &received);
+	//UNOGame(socketStatus, &socket, &received);
+
+	// Cleanup
+	
+	//threadUNO.join();
+	//threadUNOChat.join();
+
+	socket.disconnect();
+	
+	return 0;
+}
+
+void UNOGame(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received) {
+	bool endGame = false;
+
+	std::thread threadUNOReceive(ReceiveUNOGame, socket, received);
+	while (!endGame) {
+		
+
+
+	}
+	
+	threadUNOReceive.join();
+}
+
+void Chat(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received) {
 
 	std::vector<std::string> messages;
 	sf::Vector2i screenDimensions(800, 600);
@@ -65,7 +124,7 @@ int main() {
 	std::string messageStr;
 
 	// Receive
-	std::thread t(Receive, &socket, &received, &messages, &window);
+	std::thread threadChatReceive(ReceiveChat, socket, received, &messages, &window);
 
 	while (window.isOpen())
 	{
@@ -85,10 +144,10 @@ int main() {
 					// Send
 					messageStr = "Cliente:"; //+ std::to_string(userNum);
 					messageStr += mensaje;
-					socketStatus = socket.send(messageStr.c_str(), messageStr.size() + 1);
+					socketStatus = socket->send(messageStr.c_str(), messageStr.size() + 1);
 
 					if (messageStr == ">exit" || messageStr == " >exit") {
-						socket.disconnect();
+						socket->disconnect();
 						exit(0);
 					}
 
@@ -125,10 +184,5 @@ int main() {
 		window.display();
 		window.clear();
 	}
-
-	// Cleanup
-	socket.disconnect();
-	t.join();
-
-	return 0;
+	threadChatReceive.join();
 }
