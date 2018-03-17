@@ -12,7 +12,7 @@
 #define MAX_MESSAGES 25
 
 enum Commands {
-	JoinTable_, ExitTable_, DecideEntryMoney_, EntryMoney_, PlaceBetOrder_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
+	Inicio_, ExitTable_, DecideEntryMoney_, EntryMoney_, RepartirCartas_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
 };
 
 sf::IpAddress ip = sf::IpAddress::getLocalAddress();
@@ -35,7 +35,7 @@ int main() {
 
 	if (status == sf::Socket::Done) {
 		std::cout << "Conectado al Servidor " << ip << "\n";
-		packetOut << Commands::JoinTable_ << local.name; ////LOS COMANDS SON PAR EL ENVIO Y RECEPCION DE PACKETS, NO TIENE QUE VER CON EL USUARIO
+		packetOut << Commands::Inicio_ << local.name; ////LOS COMANDS SON PAR EL ENVIO Y RECEPCION DE PACKETS, NO TIENE QUE VER CON EL USUARIO
 		local.sock.send(packetOut);
 		packetOut.clear();
 	}
@@ -167,7 +167,7 @@ void ReceiveUNO() {
 				local.sock.send(packetOut);
 				break;
 
-			case PlaceBetOrder_:
+			case RepartirCartas_:
 				std::cout << "Introduce tu apuesta: ";
 				std::cin >> local.bet;
 

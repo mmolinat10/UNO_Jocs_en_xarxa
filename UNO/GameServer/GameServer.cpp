@@ -1,7 +1,9 @@
 #include <SFML\Graphics.hpp>
 #include <SFML\Network.hpp>
 //#include <Player.h>
+#include <Hand.h>
 #include <Card.h>
+#include <Deck.h>
 #include <iostream>
 #include <list>
 #include <vector>
@@ -10,7 +12,7 @@
 #define CasinoStop 17;
 
 enum Commands {
-	JoinTable_, ExitTable_, DecideEntryMoney_, EntryMoney_, PlaceBetOrder_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
+	Inicio_, ExitTable_, DecideEntryMoney_, EntryMoney_, RepartirCartas_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
 };
 
 class Player {
@@ -29,7 +31,7 @@ public:
 	std::string showCards();
 	void calculateScore();
 	std::string showScore();
-
+	Hand myHand;
 };
 
 sf::Packet packetIn, packetOut;
@@ -39,6 +41,7 @@ std::vector<Card> deck;
 Player crupier;
 std::vector<Player> players;
 int initMoney, userNum = 1;
+//Deck myDeck;
 
 void CreateDeck();
 void SendAllPlayers(std::string text);
@@ -177,22 +180,27 @@ int main() {
 							/////////////////////////////AQUI ES ON REBEM ELS PACKETS DEL CLIENT////////////////////////////////////
 							switch (com) {
 
-								case JoinTable_:
+								case Inicio_:
 									//Si es el primer jugador se le pide la cantidad inicial de dinero de la mesa
-									if (players.size() == 1) {
+									/*if (players.size() == 1) {
 										packetOut << Commands::DecideEntryMoney_;
 										it->sock->send(packetOut);
 										packetOut.clear();
-									}
+									}*/
 									packetIn >> strRec;
 									it->name = strRec;
 									SendAllPlayers("El jugador " + std::to_string(userNum) + " " + it->name + " se ha conectado!");
 
 									//Al llegar a 4 jugadores empieza la partida
+									//2 para debugar
 									if (players.size() >= 2) {
+										Deck myDeck;
 										for (int i = 0; i < players.size(); i++) {
-											players[i].money = initMoney;
-											packetOut << Commands::PlaceBetOrder_;
+											// Llenar mano para cada jugador
+											players[i].myHand.FillHand(myDeck);
+		
+											//players[i].money = initMoney;
+											packetOut << Commands::RepartirCartas_;
 											players[i].sock->send(packetOut);
 										}
 									}

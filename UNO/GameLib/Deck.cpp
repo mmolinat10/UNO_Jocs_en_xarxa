@@ -1,6 +1,7 @@
 #include "Deck.h"
 
 Deck::Deck() {
+	srand(1);
 	Random = rand();
 	FillDeck();
 	Shuffle();

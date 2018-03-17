@@ -1,7 +1,10 @@
 #pragma once
+#include <SFML\Network.hpp>
 #include "Card.h"
 #include <vector>
 #include <random>
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
 class Deck : public Card {
 
@@ -41,4 +44,6 @@ public:
 
 	/* how to specify that an array is being returned */
 	std::vector<Card *> getDiscardedCards() {return discardedCards;}
+
+
 };

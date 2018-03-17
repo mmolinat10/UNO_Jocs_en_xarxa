@@ -190,6 +190,14 @@ public:
     Packet& operator >>(wchar_t*      data);
     Packet& operator >>(std::wstring& data);
     Packet& operator >>(String&       data);
+	// Operators
+	Packet& operator << (sf::Packet& _packet, const Deck& _deck) {
+		return _packet << _deck.cards << _deck.discardedCards;
+	}
+
+	Packet& operator >> (sf::Packet& _packet, Deck& _deck) {
+		return _packet >> _deck.cards << _deck.discardedCards;
+	}
 
     ////////////////////////////////////////////////////////////
     /// Overloads of operator << to write data into the packet

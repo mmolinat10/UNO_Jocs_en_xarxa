@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML\Network.hpp>
 #include "Card.h"
+#include "Hand.h"
 
 class Player {
 public:
@@ -20,4 +21,5 @@ public:
 	std::vector<Card> hand;
 	sf::TcpSocket sock;
 	sf::TcpSocket* sock2;
+	Hand myHand;
 };

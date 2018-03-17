@@ -10,7 +10,9 @@ private:
 	std::vector <Card> cards;
 	int INIT_HAND_SIZE = 7;
 public:
+	Hand() {
 
+	}
 	Hand(Deck deck)
 	{
 		FillHand(deck);
