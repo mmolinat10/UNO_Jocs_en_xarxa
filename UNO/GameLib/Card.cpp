@@ -1,5 +1,9 @@
 #include "Card.h"
 
+Card::Card()
+{
+}
+
 Card::Card(Valid validity) {
 	if (validity == INVALID)
 	{

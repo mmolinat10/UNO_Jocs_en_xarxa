@@ -1,13 +1,11 @@
 #pragma once
 #include <iostream>
-
 #include <sstream>
 #include <vector>
 #include "Card.h"
 #include "Deck.h"
 
-class Hand
-{
+class Hand {
 private:
 	std::vector <Card> cards;
 	int INIT_HAND_SIZE = 7;

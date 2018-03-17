@@ -1,10 +1,8 @@
 #pragma once
 #include <iostream>
-
 #include <sstream>
 
-class Card
-{
+class Card {
 	
 protected:
 	enum Color { RED, YELLOW, GREEN, BLUE, NONE };
@@ -13,7 +11,7 @@ protected:
 
 	Color color;
 	Rank rank;
-	int number;
+	//int number;
 	Valid validity;
 
 public:
@@ -51,5 +49,12 @@ public:
 
 	/* method to print information about the card */
 	void PrintCard();
+
+
+	///////////////////////////////////////////// Other
+	enum Suits { Diamond, Heart, Spade, Club };
+
+	int number;
+	Suits suit;
 };
 

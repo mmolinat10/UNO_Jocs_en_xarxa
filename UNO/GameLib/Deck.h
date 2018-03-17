@@ -3,8 +3,7 @@
 #include <vector>
 #include <random>
 
-class Deck : public Card
-{
+class Deck : public Card {
 
 private:
 	std::vector <Card*> cards; /* array of cards */
