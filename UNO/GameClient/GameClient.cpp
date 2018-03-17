@@ -10,9 +10,117 @@
 #define MAX_MESSAGES 30
 #define DEFAULT_PORT 5000
 std::mutex mutex;
-
+void ReceiveUNOGame(sf::TcpSocket* socket, size_t* received);
 void UNOGame(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received);
+void ReceiveChat(sf::TcpSocket* socket, size_t* received, std::vector<std::string>* messages, sf::RenderWindow* window);
 void Chat(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received);
+
+int main() {
+
+	PlayerInfo playerInfo;
+	sf::TcpSocket::Status socketStatus = sf::TcpSocket::Status::NotReady;
+	sf::TcpSocket socket;
+	//socket.setBlocking(false);
+
+	size_t received;
+	sf::IpAddress ip = sf::IpAddress::getLocalAddress(); // ip local
+	socket.connect(ip, DEFAULT_PORT);
+
+	UNOGame(socketStatus, &socket, &received);
+	//std::thread threadUNOChat(Chat, socketStatus, &socket, &received);
+	
+	
+	//Chat(socketStatus, &socket, &received);
+	//UNOGame(socketStatus, &socket, &received);
+
+	// Cleanup
+	//threadUNO.join();
+	//threadUNOChat.join();
+
+	socket.disconnect();
+	
+	return 0;
+}
+
+void ReceiveUNOGame(sf::TcpSocket* socket, size_t* received) {
+
+	bool endGame = false;
+	bool firstTime = true;
+
+	while (!endGame) {
+		char buffer[2000];
+		sf::Socket::Status status = socket->receive(buffer, sizeof(buffer), *received);
+		std::string str = buffer;
+
+		// Conversion de string a lo que necesitamos dividido entre '_'
+		int playerReceived = 0;
+		int userNum = 0;
+		std::string playerNum = "", myTurn = "";
+		int newWord = 0;
+		if (status == sf::Socket::Status::Done) {
+			mutex.lock();
+
+			// La primera vez que el servidor nos envia un mensaje recogemos el numero de cliente que somos
+			// para determinar si el mensaje va dirigido a nosotros, es decir, si somos el cliente1
+			// solo printaremos aquellos mensajes del cliente1, dejando de lado los mensajes del cliente2,3,4..
+			if (firstTime) {
+				for (char& c : str) {
+					if (c == '_')
+						newWord++;
+
+					// Si el mensaje del Server esta entre la primera '_' y la segunda '_'
+					if (newWord == 1) {
+						userNum = (int)c - 48;
+						playerReceived = (int)c - 48;
+					}
+					// Si el mensaje del Server esta entre la segunda '_' y la tercera '_'
+					if (newWord == 2) {
+						myTurn += c;
+					}
+				}
+				firstTime = false;
+			}
+			// Si no es la primera vez, recogemos en un int playerReceived, el usuario al que va dirigido el mensaje
+			else {
+				for (char& c : str) {
+					if (c == '_')
+						newWord++;
+
+					if (newWord == 1) {
+						playerReceived = (int)c - 48;
+					}
+					if (newWord == 2) {
+						myTurn += c;
+					}
+				}
+				firstTime = false;
+			}
+
+
+			// Solo printamos el mensaje si va dirigido a nosotros
+			if (userNum == playerReceived) std::cout << str << std::endl;
+			
+			//std::cout << "userNum: " << userNum << " playerReceived: " << playerReceived << std::endl;
+			mutex.unlock();
+		}
+
+	}
+
+}
+
+void UNOGame(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received) {
+	bool endGame = false;
+
+	std::thread threadUNOReceive(ReceiveUNOGame, socket, received);
+	while (!endGame) {
+		// Send
+		std::string messageStr; 
+		std::cin >> messageStr;
+		socket->send(messageStr.c_str(), messageStr.size() + 1);
+	}
+	
+	threadUNOReceive.join();
+}
 
 void ReceiveChat(sf::TcpSocket* socket, size_t* received, std::vector<std::string>* messages, sf::RenderWindow* window) {
 
@@ -29,70 +137,6 @@ void ReceiveChat(sf::TcpSocket* socket, size_t* received, std::vector<std::strin
 			mutex.unlock();
 		}
 	}
-}
-
-void ReceiveUNOGame(sf::TcpSocket* socket, size_t* received) {
-	
-	bool endGame = false;
-	
-
-	while (!endGame) {
-		char buffer[2000];
-		sf::Socket::Status status = socket->receive(buffer, sizeof(buffer), *received);
-		std::string str = buffer;
-		
-		if (status == sf::Socket::Status::Done) {
-			mutex.lock();
-
-			std::cout << str << std::endl;
-			mutex.unlock();
-		}
-		
-	}
-	
-	
-	
-}
-
-int main() {
-
-	PlayerInfo playerInfo;
-	sf::TcpSocket::Status socketStatus = sf::TcpSocket::Status::NotReady;
-	sf::TcpSocket socket;
-	socket.setBlocking(false);
-
-	size_t received;
-	sf::IpAddress ip = sf::IpAddress::getLocalAddress(); // ip local
-	socket.connect(ip, DEFAULT_PORT);
-
-	UNOGame(socketStatus, &socket, &received);
-	//std::thread threadUNOChat(Chat, socketStatus, &socket, &received);
-	
-	
-	//Chat(socketStatus, &socket, &received);
-	//UNOGame(socketStatus, &socket, &received);
-
-	// Cleanup
-	
-	//threadUNO.join();
-	//threadUNOChat.join();
-
-	socket.disconnect();
-	
-	return 0;
-}
-
-void UNOGame(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received) {
-	bool endGame = false;
-
-	std::thread threadUNOReceive(ReceiveUNOGame, socket, received);
-	while (!endGame) {
-		
-
-
-	}
-	
-	threadUNOReceive.join();
 }
 
 void Chat(sf::TcpSocket::Status socketStatus, sf::TcpSocket* socket, size_t*  received) {

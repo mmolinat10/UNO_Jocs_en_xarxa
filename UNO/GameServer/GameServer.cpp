@@ -48,14 +48,19 @@ int main() {
 						sList.push_back(socket);
 					}
 
-
 					sSelector.add(*socket);
 
-					std::cout << "Se ha conectado el cliente " + std::to_string(userNum) + "!" << std::endl;
+					// Mensaje consola Server
+					std::cout << "Se ha conectado el jugador " + std::to_string(userNum) + "!" << std::endl;
+
+					// Mensaje consola Cliente (que enviamos)
+					message = "Bienvenido a la partida jugador _" + std::to_string(userNum) + "!\nPor favor espera a que lleguen los demas jugadores!";
+					for (sf::TcpSocket* s : sList)
+						s->send(message.c_str(), message.size() + 1);
 					userNum++;
 				}
 				else {
-					message = "Empieza la partida!";
+					message = "Han llegado todos los jugadores! Empieza la partida!";
 					for (sf::TcpSocket* s : sList)
 						s->send(message.c_str(), message.size() + 1);
 					
@@ -76,12 +81,13 @@ int main() {
 
 						if (sStatus == sf::TcpSocket::Status::Done) {
 							message = buffer;
-							for (int j = 0; j < sList.size(); j++) {
+							std::cout << "Mensaje del jugador " + std::to_string(userNum-1) + ": " << message << std::endl;
+							/*for (int j = 0; j < sList.size(); j++) {
 								sf::TcpSocket::Status st = sList[j]->send(message.c_str(), message.size() + 1);
 
 								if (st == sf::TcpSocket::Status::Error)
 									std::cout << "Error" << std::endl;
-							}
+							}*/
 						}
 						else if (sStatus == sf::TcpSocket::Status::Disconnected)
 							Disconnected(sList, &sSelector, i);
@@ -110,8 +116,8 @@ void Disconnected(std::vector<sf::TcpSocket*>& list, sf::SocketSelector *ss, int
 	list.erase(list.begin() + userNum, list.begin() + userNum + 1);
 
 	for (sf::TcpSocket* socket : list) {
-		std::string outMsn = "El cliente " + std::to_string(userNum + 1) + " se ha desconectado!";
+		std::string outMsn = "El jugador " + std::to_string(userNum + 1) + " se ha desconectado!";
 		socket->send(outMsn.c_str(), outMsn.size() + 1);
 	}
-	std::cout << "El cliente " + std::to_string(userNum + 1) + " se ha desconectado!" << std::endl;
+	std::cout << "El jugador " + std::to_string(userNum + 1) + " se ha desconectado!" << std::endl;
 }
