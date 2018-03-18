@@ -7,9 +7,10 @@
 
 class Hand {
 private:
-	std::vector <Card> cards;
+	
 	int INIT_HAND_SIZE = 7;
 public:
+	std::vector <Card> cards;
 	Hand() {
 
 	}

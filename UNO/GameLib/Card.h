@@ -5,6 +5,8 @@
 class Card {
 	
 protected:
+	
+public:
 	enum Color { RED, YELLOW, GREEN, BLUE, NONE };
 	enum Rank { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_D4 };
 	enum Valid { VALID, INVALID };
@@ -13,8 +15,7 @@ protected:
 	Rank rank;
 	//int number;
 	Valid validity;
-
-public:
+	int number;
 	Card();
 	Card(Valid validity);
 
@@ -49,12 +50,5 @@ public:
 
 	/* method to print information about the card */
 	void PrintCard();
-
-
-	///////////////////////////////////////////// Other
-	enum Suits { Diamond, Heart, Spade, Club };
-
-	int number;
-	Suits suit;
 };
 

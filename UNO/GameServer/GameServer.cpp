@@ -1,6 +1,5 @@
 #include <SFML\Graphics.hpp>
 #include <SFML\Network.hpp>
-//#include <Player.h>
 #include <Hand.h>
 #include <Card.h>
 #include <Deck.h>
@@ -8,55 +7,57 @@
 #include <list>
 #include <vector>
 
-#define Blackjack 21;
-#define CasinoStop 17;
 
 enum Commands {
-	Inicio_, ExitTable_, DecideEntryMoney_, EntryMoney_, RepartirCartas_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
+	Inicio_, Exit_, RepartirCartas_, Chat_
+};
+enum Color { RED, YELLOW, GREEN, BLUE, NONE };
+enum Rank { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_D4 };
+enum Valid { VALID, INVALID };
+
+sf::Packet& operator <<(sf::Packet& packet, const Color& c) {
+	return packet << c;
 };
 
-sf::Packet& operator <<(sf::Packet& packet, const Card& c)
-{
-	return packet << c.GetColor << c.GetNumber << c.GetRank << c.GetValidity;
-}
-sf::Packet& operator >>(sf::Packet& packet, Card& c)
-{
-	return packet >> c.GetColor >> c.GetNumber >> c.GetRank >> c.GetValidity;
+sf::Packet& operator >>(sf::Packet& packet, Rank& r) {
+	return packet >> r;
 }
 
-sf::Packet& operator <<(sf::Packet& Packet, const std::vector<Card>& c)
-{
-	Packet << c.size();
-	for (int i = 0; i<c.size(); i++)
-	{
-		Packet << c[i];
+sf::Packet& operator <<(sf::Packet& packet, const Rank& r) {
+	return packet << r;
+}
+
+sf::Packet& operator >>(sf::Packet& packet, Valid& v) {
+	return packet >> v;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Valid& v) {
+	return packet << v;
+}
+
+
+sf::Packet& operator >>(sf::Packet& packet, Color& c) {
+	return packet >> c;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Card& c) {
+	return packet << c.color << c.number << c.rank << c.validity;
+}
+sf::Packet& operator >>(sf::Packet& packet, Card& c) {
+	return packet >> c;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Hand& h) {
+	for (int i = 0; i < h.cards.size(); i++) {
+		packet << h.cards[i];
 	}
-	return Packet;
+	return packet;
 }
-
-template<class T>
-sf::Packet& operator >>(sf::Packet& Packet, std::vector<Card*>& A)
-{
-	unsigned int size;
-	Packet >> size;
-	A.reserve(size);
-	for (int i = 0; i<size; i++)
-	{
-		Card temp;
-		Packet >> temp;
-		A.push_back(temp);
+sf::Packet& operator >>(sf::Packet& packet, Hand& h) {
+	for (int i = 0; i < h.cards.size(); i++) {
+		packet >> h.cards[i];
 	}
-	return Packet;
-}
-
-// ni idea
-sf::Packet& operator <<(sf::Packet& packet, const Deck& d)
-{
-	return packet << d.cards << d.discardedCards;
-}
-sf::Packet& operator >>(sf::Packet& packet, Deck& d)
-{
-	return packet >> d.cards >> d.discardedCards;
+	return packet;
 }
 
 class Player {
@@ -65,16 +66,10 @@ public:
 	~Player() {}
 
 	std::string name;
-	int money = 20;
-	int bet = 0;
-	std::vector<int> score;
+
 	std::vector<Card> hand;
 
 	sf::TcpSocket* sock;
-
-	std::string showCards();
-	void calculateScore();
-	std::string showScore();
 	Hand myHand;
 };
 
@@ -82,94 +77,16 @@ sf::Packet packetIn, packetOut;
 sf::TcpListener listener;
 sf::SocketSelector selector;
 std::vector<Card> deck;
-Player crupier;
+Player jug;
 std::vector<Player> players;
-int initMoney, userNum = 1;
-//Deck myDeck;
+int userNum = 1;
 
-void CreateDeck();
+
 void SendAllPlayers(std::string text);
-Card GiveRandomCard();
-
-std::string Player::showCards() {
-	std::string text = "El jugador " + name + " tiene:";
-	for each (Card card in hand) {
-		std::string num;
-		switch (card.number) {
-		case 0:
-			num = "A";
-			break;
-		case 11:
-			num = "J";
-			break;
-		case 12:
-			num = "Q";
-			break;
-		case 13:
-			num = "K";
-			break;
-		default:
-			num = std::to_string(card.number);
-			break;
-		}
-		switch (card.suit) {
-		case 0:
-			num += " de Diamantes";
-			break;
-		case 1:
-			num += " de Corazones";
-			break;
-		case 2:
-			num += " de Picas";
-			break;
-		case 3:
-			num += " de Treboles";
-			break;
-		default:
-			break;
-		}
-		text += " " + num;
-	}
-	return text;
-}
-void Player::calculateScore() {
-	std::vector<int> s;
-	s.push_back(0);
-	for each (Card card in hand) {
-		std::string num;
-		switch (card.number) {
-		case 1:
-			s[0] += card.number;
-			for (int i = 0; i < s.size(); i++) s[i] += card.number;
-			s.push_back(s[0] + 10);
-			break;
-		case 11:
-		case 12:
-		case 13:
-			for (int i = 0; i < s.size(); i++) s[i] += 10;
-			break;
-		default:
-			for (int i = 0; i < s.size(); i++) s[i] += card.number;
-			break;
-		}
-	}
-	score = s;
-}
-std::string Player::showScore() {
-	std::string text;
-	for (int i = 0; i < score.size(); i++) {
-		text += "Score(" + std::to_string(i) + "): " + std::to_string(score[i]) + "\n";
-	}
-	return text;
-}
 
 // MAIN
 int main() {
-
-	// Crear mazo de la partida y escuchar para recoger los jugadores
-	srand(time(NULL));
-	CreateDeck();
-	crupier.name = "Crupier";
+	jug.name = "nombreJug";
 	bool running = true;
 	sf::Socket::Status status = listener.listen(5000);
 	if (status != sf::Socket::Done) {
@@ -177,11 +94,11 @@ int main() {
 		exit(0);
 	}
 
-	// Add the listener to the selector
+	// Add the listener
 	selector.add(listener);
 	std::cout << "ESTO ES EL JUEGO DEL UNO!" << std::endl << "Esperando a los jugadores..." << std::endl;
 
-	// Endless loop that waits for new connections
+	// waits for new connections
 	while (running) {
 
 		if (selector.wait()) {
@@ -225,84 +142,33 @@ int main() {
 							switch (com) {
 
 								case Inicio_:
-									//Si es el primer jugador se le pide la cantidad inicial de dinero de la mesa
-									/*if (players.size() == 1) {
-										packetOut << Commands::DecideEntryMoney_;
-										it->sock->send(packetOut);
-										packetOut.clear();
-									}*/
 									packetIn >> strRec;
 									it->name = strRec;
 									SendAllPlayers("El jugador " + std::to_string(userNum) + " " + it->name + " se ha conectado!");
 
 									//Al llegar a 4 jugadores empieza la partida
 									//2 para debugar
-									if (players.size() >= 2) {
+									if (players.size() >= 4) {
 										Deck myDeck;
 										for (int i = 0; i < players.size(); i++) {
 											// Llenar mano para cada jugador
 											players[i].myHand.FillHand(myDeck);
-		
-											//players[i].money = initMoney;
-											packetOut << Commands::RepartirCartas_ << myDeck;
+											
+											//enviar 7 cartas a la mano del cliente, el deck solo esta en el server!
+											//packetOut << Commands::RepartirCartas_ << players[i].myHand;
+											packetOut << Commands::RepartirCartas_;
 											players[i].sock->send(packetOut);
 										}
 									}
 									break;
 
-								case ChatMSG_:
+								case Chat_:
 									packetIn >> strRec;
 									SendAllPlayers(strRec);
 									break;
 
-								case ExitTable_:
+								case Exit_:
 									SendAllPlayers("El jugador " + it->name + " se ha desconectado!");
-									break;
-
-								case EntryMoney_:
-									packetIn >> intRec;
-									initMoney = intRec;
-									break;
-
-								case PlaceBet_:
-								{
-									packetIn >> it->bet;
-									std::cout << it->bet << " : " << it->money << std::endl;
-									if (it->bet > it->money) {
-										packetOut << Commands::IncorrectBet_;
-										it->sock->send(packetOut);
-										packetOut.clear();
-										SendAllPlayers("El jugador " + it->name + " no tiene ni idea!");
-									}
-									else {
-										SendAllPlayers("El jugador " + it->name + " ha apostado: " + std::to_string(it->bet) + "!");
-									}
-									bool allBetOk = true;
-									for (auto &player : players) {
-										if (player.bet == 0) allBetOk = false;
-									}
-									if (allBetOk) {
-										for (int i = 0; i < players.size(); i++) {
-											players[i].hand.push_back(GiveRandomCard());
-											players[i].hand.push_back(GiveRandomCard());
-											SendAllPlayers(players[i].showCards());
-										}
-										crupier.hand.push_back(GiveRandomCard());
-										SendAllPlayers(crupier.showCards());
-										packetOut << Commands::StartPlayerTurn_;
-										players.front().sock->send(packetOut);
-										SendAllPlayers(" Es el turno del jugador: " + players.front().name + "\n" + players.front().showCards() + " con puntuacion: " + players.front().showScore());
-									}
-								}
-								break;
-
-								case AskForCard_:
-									break;
-
-								case NomoreCards_:
-									break;
-
-								case DoubleBet_:
 									break;
 
 								default:
@@ -323,32 +189,13 @@ int main() {
 	}
 }
 
-void CreateDeck() {
-	deck.clear();
-	for (int i = 0; i < 4; i++) {
-		for (int j = 1; j <= 13; j++) {
-			Card newCard;
-			newCard.suit = (Card::Suits)i;
-			newCard.number = j;
-			deck.push_back(newCard);
-		}
-	}
-}
-
-//Send a message to all clients
+//Send a message
 void SendAllPlayers(std::string text) {
 	sf::Packet packet;
-	packet << Commands::ChatMSG_ << text;
+	packet << Commands::Chat_ << text;
 
 	for (auto &player : players) {
 		player.sock->send(packet);
 	}
 	packet.clear();
-}
-
-Card GiveRandomCard() {
-	int pos = rand() % (deck.size() + 1);
-	Card card = deck.at(pos);
-	deck.erase(deck.begin() + pos);
-	return card;
 }

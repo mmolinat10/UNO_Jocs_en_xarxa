@@ -12,8 +12,57 @@
 #define MAX_MESSAGES 25
 
 enum Commands {
-	Inicio_, ExitTable_, DecideEntryMoney_, EntryMoney_, RepartirCartas_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
+	Inicio_, Exit_, RepartirCartas_, Chat_
 };
+
+enum Color { RED, YELLOW, GREEN, BLUE, NONE };
+enum Rank { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_D4 };
+enum Valid { VALID, INVALID };
+
+sf::Packet& operator <<(sf::Packet& packet, const Color& c) {
+	return packet << c;
+};
+
+sf::Packet& operator >>(sf::Packet& packet, Rank& r) {
+	return packet >> r;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Rank& r) {
+	return packet << r;
+}
+
+sf::Packet& operator >>(sf::Packet& packet, Valid& v) {
+	return packet >> v;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Valid& v) {
+	return packet << v;
+}
+
+
+sf::Packet& operator >>(sf::Packet& packet, Color& c) {
+	return packet >> c;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Card& c) {
+	return packet << c.color << c.number << c.rank << c.validity;
+}
+sf::Packet& operator >>(sf::Packet& packet, Card& c) {
+	return packet >> c;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Hand& h) {
+	for (int i = 0; i < h.cards.size(); i++) {
+		packet << h.cards[i];
+	}
+	return packet;
+}
+sf::Packet& operator >>(sf::Packet& packet, Hand& h) {
+	for (int i = 0; i < h.cards.size(); i++) {
+		packet >> h.cards[i];
+	}
+	return packet;
+}
 
 sf::IpAddress ip = sf::IpAddress::getLocalAddress();
 sf::Socket::Status status;
@@ -21,67 +70,30 @@ std::vector<std::string> aMessages;
 std::mutex mut;
 sf::Packet packetOut;
 Player local;
-Deck deck;
 
 void ReceiveChat(std::string text);
 void ReceiveUNO();
-
-template<class T>
-sf::Packet& operator <<(sf::Packet& Packet, const std::vector<T>& A)
-{
-	Packet << A.size();
-	for (int i = 0; i<A.size(); i++)
-	{
-		Packet << A[i];
-	}
-	return Packet;
-}
-
-template<class T>
-sf::Packet& operator >>(sf::Packet& Packet, std::vector<T>& A)
-{
-	unsigned int size;
-	Packet >> size;
-	A.reserve(size);
-	for (int i = 0; i<size; i++)
-	{
-		T temp;
-		Packet >> temp;
-		A.push_back(temp);
-	}
-	return Packet;
-}
-
-sf::Packet& operator <<(sf::Packet& packet, const Deck& d)
-{
-	return packet << d.cards << d.discardedCards;
-}
-sf::Packet& operator >>(sf::Packet& packet, Deck& d)
-{
-	return packet >> d.cards >> d.discardedCards;
-}
 
 // MAIN
 int main() {
 
 	// Guardamos el nombre del usuario, nos conectamos al servidor y abrimos el chat
-	std::cout << "Por favor introduce tu nombre de usuario: ";
+	std::cout << "Nombre de usuario: ";
 	std::cin >> local.name;
 	status = local.sock.connect(ip, 5000, sf::seconds(5.f));
 
 	if (status == sf::Socket::Done) {
-		std::cout << "Conectado al Servidor " << ip << "\n";
+		std::cout << "Conectado al server " << ip << "\n";
 		packetOut << Commands::Inicio_ << local.name; ////LOS COMANDS SON PAR EL ENVIO Y RECEPCION DE PACKETS, NO TIENE QUE VER CON EL USUARIO
 		local.sock.send(packetOut);
 		packetOut.clear();
 	}
 	else {
-		std::cout << "Fallo al conectar con el Servidor " << ip << "\n";
+		std::cout << "Fallo al conectar al server " << ip << "\n";
 		system("pause");
 		exit(0);
 	}
 
-	//******************************CHAT*******************************************//
 	sf::Vector2i screenDimensions(800, 600);
 	sf::RenderWindow window;
 	window.create(sf::VideoMode(screenDimensions.x, screenDimensions.y), ("Chat (" + local.name + ")"));
@@ -132,7 +144,7 @@ int main() {
 						}
 						mensaje = local.name + ": " + mensaje;
 						std::cout << "a" + mensaje.toAnsiString() << std::endl;
-						packetOut << Commands::ChatMSG_ << mensaje.toAnsiString().c_str();
+						packetOut << Commands::Chat_ << mensaje.toAnsiString().c_str();
 						local.sock.send(packetOut);
 						packetOut.clear();
 					
@@ -164,7 +176,7 @@ int main() {
 		window.display();
 		window.clear();
 	}
-	packetOut << Commands::ExitTable_;
+	packetOut << Commands::Exit_;
 	local.sock.send(packetOut);
 
 	// Cleanup
@@ -186,7 +198,7 @@ void ReceiveUNO() {
 	int intRec;
 	int enumVar;
 	Commands com;
-	sf::Packet packetDeck;
+	sf::Packet packetHand;
 
 
 	/////////////////////////////////////RECOGEMOS EL COMMAND QUE NOS HA ENVIADO EL SERVER////////////////////////////////////
@@ -197,42 +209,14 @@ void ReceiveUNO() {
 
 		switch (com) {
 
-			case DecideEntryMoney_:
-				std::cout << "Introduce el dinero inicial de la mesa: ";
-				std::cin >> local.money;
-
-				packetOut << Commands::EntryMoney_ << local.money;
-				local.sock.send(packetOut);
-				break;
-
 			case RepartirCartas_:
-				packetDeck >> deck;
-				deck.PrintCard();
-				/*std::cout << "Introduce tu apuesta: ";
-				std::cin >> local.bet;
-
-				packetOut << Commands::PlaceBet_ << local.bet;
-				local.sock.send(packetOut);*/
+				local.sock.receive(packetHand);
+				packetHand >> local.myHand;
+				local.myHand.DisplayHand();
+				//... a continuar
 				break;
 
-			case IncorrectBet_:
-				std::cout << "Error en tu apuesta, dinero insuficiente\nIntroduce tu apuesta: ";
-				std::cin >> local.bet;
-
-				packetOut << Commands::PlaceBet_ << local.bet;
-				local.sock.send(packetOut);
-				break;
-
-			case GiveInitialCards_:
-				break;
-
-			case StartPlayerTurn_:
-				break;
-
-			case EndRound_:
-				break;
-
-			case ChatMSG_:
+			case Chat_:
 				packetIn >> strRec;
 				ReceiveChat(strRec);
 				break;
@@ -240,7 +224,7 @@ void ReceiveUNO() {
 			default:
 				break;
 		}
-		// Cleanup
+		// Clean
 		packetIn.clear();
 		packetOut.clear();
 	} while (status == sf::Socket::Done);
