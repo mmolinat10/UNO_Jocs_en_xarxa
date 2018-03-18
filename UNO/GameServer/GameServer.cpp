@@ -15,6 +15,50 @@ enum Commands {
 	Inicio_, ExitTable_, DecideEntryMoney_, EntryMoney_, RepartirCartas_, PlaceBet_, GiveInitialCards_, IncorrectBet_, StartPlayerTurn_, AskForCard_, NomoreCards_, DoubleBet_, EndRound_, ChatMSG_
 };
 
+sf::Packet& operator <<(sf::Packet& packet, const Card& c)
+{
+	return packet << c.GetColor << c.GetNumber << c.GetRank << c.GetValidity;
+}
+sf::Packet& operator >>(sf::Packet& packet, Card& c)
+{
+	return packet >> c.GetColor >> c.GetNumber >> c.GetRank >> c.GetValidity;
+}
+
+sf::Packet& operator <<(sf::Packet& Packet, const std::vector<Card>& c)
+{
+	Packet << c.size();
+	for (int i = 0; i<c.size(); i++)
+	{
+		Packet << c[i];
+	}
+	return Packet;
+}
+
+template<class T>
+sf::Packet& operator >>(sf::Packet& Packet, std::vector<Card*>& A)
+{
+	unsigned int size;
+	Packet >> size;
+	A.reserve(size);
+	for (int i = 0; i<size; i++)
+	{
+		Card temp;
+		Packet >> temp;
+		A.push_back(temp);
+	}
+	return Packet;
+}
+
+// ni idea
+sf::Packet& operator <<(sf::Packet& packet, const Deck& d)
+{
+	return packet << d.cards << d.discardedCards;
+}
+sf::Packet& operator >>(sf::Packet& packet, Deck& d)
+{
+	return packet >> d.cards >> d.discardedCards;
+}
+
 class Player {
 public:
 	Player() {}
@@ -200,7 +244,7 @@ int main() {
 											players[i].myHand.FillHand(myDeck);
 		
 											//players[i].money = initMoney;
-											packetOut << Commands::RepartirCartas_;
+											packetOut << Commands::RepartirCartas_ << myDeck;
 											players[i].sock->send(packetOut);
 										}
 									}

@@ -9,8 +9,7 @@
 class Deck : public Card {
 
 private:
-	std::vector <Card*> cards; /* array of cards */
-	std::vector <Card*> discardedCards;
+	
 	int Random = rand();
 
 public:
@@ -20,6 +19,8 @@ public:
 	int NUMBER_OF_WILD_CARDS = 4;
 	int NUMBER_OF_WILD_D4_CARDS = 4;
 	int SHUFFLE_FACTOR = 1;
+	std::vector <Card*> cards; /* array of cards */
+	std::vector <Card*> discardedCards;
 
 	/* constructs a new deck */
 	Deck();
@@ -47,3 +48,4 @@ public:
 
 
 };
+

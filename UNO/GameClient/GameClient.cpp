@@ -21,9 +21,45 @@ std::vector<std::string> aMessages;
 std::mutex mut;
 sf::Packet packetOut;
 Player local;
+Deck deck;
 
 void ReceiveChat(std::string text);
 void ReceiveUNO();
+
+template<class T>
+sf::Packet& operator <<(sf::Packet& Packet, const std::vector<T>& A)
+{
+	Packet << A.size();
+	for (int i = 0; i<A.size(); i++)
+	{
+		Packet << A[i];
+	}
+	return Packet;
+}
+
+template<class T>
+sf::Packet& operator >>(sf::Packet& Packet, std::vector<T>& A)
+{
+	unsigned int size;
+	Packet >> size;
+	A.reserve(size);
+	for (int i = 0; i<size; i++)
+	{
+		T temp;
+		Packet >> temp;
+		A.push_back(temp);
+	}
+	return Packet;
+}
+
+sf::Packet& operator <<(sf::Packet& packet, const Deck& d)
+{
+	return packet << d.cards << d.discardedCards;
+}
+sf::Packet& operator >>(sf::Packet& packet, Deck& d)
+{
+	return packet >> d.cards >> d.discardedCards;
+}
 
 // MAIN
 int main() {
@@ -150,6 +186,8 @@ void ReceiveUNO() {
 	int intRec;
 	int enumVar;
 	Commands com;
+	sf::Packet packetDeck;
+
 
 	/////////////////////////////////////RECOGEMOS EL COMMAND QUE NOS HA ENVIADO EL SERVER////////////////////////////////////
 	do {
@@ -168,11 +206,13 @@ void ReceiveUNO() {
 				break;
 
 			case RepartirCartas_:
-				std::cout << "Introduce tu apuesta: ";
+				packetDeck >> deck;
+				deck.PrintCard();
+				/*std::cout << "Introduce tu apuesta: ";
 				std::cin >> local.bet;
 
 				packetOut << Commands::PlaceBet_ << local.bet;
-				local.sock.send(packetOut);
+				local.sock.send(packetOut);*/
 				break;
 
 			case IncorrectBet_:

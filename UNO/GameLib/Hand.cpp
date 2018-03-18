@@ -58,3 +58,4 @@ void Hand::FillHand(Deck deck) {
 		this->AddCard(deck.Draw());
 	}
 }
+
