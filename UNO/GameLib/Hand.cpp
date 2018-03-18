@@ -7,6 +7,7 @@ void Hand::DisplayHand() {
 		std::cout << ", ";
 		cards[i].PrintCard();
 	}
+	std::cout << std::endl;
 }
 
 bool Hand::IsIn(Card card) {

@@ -13,7 +13,6 @@ public:
 
 	Color color;
 	Rank rank;
-	//int number;
 	Valid validity;
 	int number;
 	Card();

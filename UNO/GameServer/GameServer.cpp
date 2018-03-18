@@ -7,10 +7,7 @@
 #include <list>
 #include <vector>
 
-
-enum Commands {
-	Inicio_, Exit_, RepartirCartas_, Chat_
-};
+enum Command { Inicio_, Exit_, RepartirCartas_, Chat_ };
 enum Color { RED, YELLOW, GREEN, BLUE, NONE };
 enum Rank { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_D4 };
 enum Valid { VALID, INVALID };
@@ -34,7 +31,6 @@ sf::Packet& operator >>(sf::Packet& packet, Valid& v) {
 sf::Packet& operator <<(sf::Packet& packet, const Valid& v) {
 	return packet << v;
 }
-
 
 sf::Packet& operator >>(sf::Packet& packet, Color& c) {
 	return packet >> c;
@@ -66,53 +62,52 @@ public:
 	~Player() {}
 
 	std::string name;
-
 	std::vector<Card> hand;
-
 	sf::TcpSocket* sock;
 	Hand myHand;
 };
 
-sf::Packet packetIn, packetOut;
+void SendAllPlayers(std::string text);
+
+sf::Packet packetReceive, packetSend;
 sf::TcpListener listener;
-sf::SocketSelector selector;
+sf::SocketSelector ss;
 std::vector<Card> deck;
 Player jug;
-std::vector<Player> players;
+std::vector<Player> aPlayers;
 int userNum = 1;
-
-
-void SendAllPlayers(std::string text);
 
 // MAIN
 int main() {
+
 	jug.name = "nombreJug";
-	bool running = true;
+
 	sf::Socket::Status status = listener.listen(5000);
+
 	if (status != sf::Socket::Done) {
-		std::cout << "Error al abrir listener\n";
+		std::cout << "Error al abrir listener" << std::endl;
 		exit(0);
 	}
 
-	// Add the listener
-	selector.add(listener);
-	std::cout << "ESTO ES EL JUEGO DEL UNO!" << std::endl << "Esperando a los jugadores..." << std::endl;
+	ss.add(listener);
+	std::cout << "ESTO ES EL JUEGO DEL UNO!" << std::endl << "Esperando a que se conecten los jugadores..." << std::endl;
 
-	// waits for new connections
-	while (running) {
+	bool notEnd = true;
 
-		if (selector.wait()) {
+	while (notEnd) {
+
+		if (ss.wait()) {
 
 			/////////////////////////////////REBRE CLIENTS PER PRIMERA VEGADA/////////////////////////////////////////////
-			if (selector.isReady(listener)) {
+			if (ss.isReady(listener)) {
 
 				Player newPlayer;
 				newPlayer.sock = new sf::TcpSocket;
 
 				if (listener.accept(*newPlayer.sock) == sf::Socket::Done) {
-					std::cout << "Se ha conectado el jugador " << userNum << " con puerto: " << newPlayer.sock->getRemotePort() << "!" << std::endl;
-					players.push_back(newPlayer);
-					selector.add(*newPlayer.sock);
+					std::cout << "Se ha conectado el jugador " << userNum << "!" << std::endl;
+					aPlayers.push_back(newPlayer);
+					ss.add(*newPlayer.sock);
 					userNum++;
 				}
 				else {
@@ -123,48 +118,48 @@ int main() {
 
 			///////////////////////AQUESTA PART ES ON GESTIONEM EL QUE REBEM DEL CLIENT///////////////////////////////////////////////
 			else {
-				userNum = 0;
-				for (std::vector<Player>::iterator it = players.begin(); it != players.end(); it++) {
-					userNum++;
-					if (selector.isReady(*it->sock)) {
 
-						status = it->sock->receive(packetIn);
+				userNum = 0;
+
+				for (std::vector<Player>::iterator it = aPlayers.begin(); it != aPlayers.end(); it++) {
+					userNum++;
+					if (ss.isReady(*it->sock)) {
+
+						status = it->sock->receive(packetReceive);
 
 						if (status == sf::Socket::Done) {
-							std::string strRec;
-							int intRec;
-							int enumVar;
-							Commands com;
-							packetIn >> enumVar;
-							com = (Commands)enumVar;
+							std::string receiveStr;
+							int receiveInt, enumVar;
+							Command command;
+							packetReceive >> enumVar;
+							command = (Command)enumVar;
 
 							/////////////////////////////AQUI ES ON REBEM ELS PACKETS DEL CLIENT////////////////////////////////////
-							switch (com) {
+							switch (command) {
 
 								case Inicio_:
-									packetIn >> strRec;
-									it->name = strRec;
+									packetReceive >> receiveStr;
+									it->name = receiveStr;
 									SendAllPlayers("El jugador " + std::to_string(userNum) + " " + it->name + " se ha conectado!");
 
-									//Al llegar a 4 jugadores empieza la partida
-									//2 para debugar
-									if (players.size() >= 4) {
+									//Al llegar a 4 jugadores empieza la partida 
+									if (aPlayers.size() >= 4) {
 										Deck myDeck;
-										for (int i = 0; i < players.size(); i++) {
+										for (int i = 0; i < aPlayers.size(); i++) {
 											// Llenar mano para cada jugador
-											players[i].myHand.FillHand(myDeck);
-											
+											aPlayers[i].myHand.FillHand(myDeck);
+											//aPlayers[i].myHand.DisplayHand();
 											//enviar 7 cartas a la mano del cliente, el deck solo esta en el server!
 											//packetOut << Commands::RepartirCartas_ << players[i].myHand;
-											packetOut << Commands::RepartirCartas_;
-											players[i].sock->send(packetOut);
+											packetSend << Command::RepartirCartas_;
+											aPlayers[i].sock->send(packetSend);
 										}
 									}
 									break;
 
 								case Chat_:
-									packetIn >> strRec;
-									SendAllPlayers(strRec);
+									packetReceive >> receiveStr;
+									SendAllPlayers(receiveStr);
 									break;
 
 								case Exit_:
@@ -174,14 +169,14 @@ int main() {
 								default:
 									break;
 							}
-							packetOut.clear();
+							packetSend.clear();
 						}
 						else if (status == sf::Socket::Disconnected) {
-							selector.remove(*it->sock);
-							std::cout << "Elimino el socket que se ha desconectado\n";
+							ss.remove(*it->sock);
+							std::cout << "Se ha eliminado el socket que se ha desconectado" << std::endl;
 						}
-						else std::cout << "Error al recibir de " << it->sock->getRemotePort() << std::endl;
-						packetIn.clear();
+						else std::cout << "Error al recibir " <<  std::endl;
+						packetReceive.clear();
 					}
 				}
 			}
@@ -189,12 +184,11 @@ int main() {
 	}
 }
 
-//Send a message
 void SendAllPlayers(std::string text) {
 	sf::Packet packet;
-	packet << Commands::Chat_ << text;
+	packet << Command::Chat_ << text;
 
-	for (auto &player : players) {
+	for (auto &player : aPlayers) {
 		player.sock->send(packet);
 	}
 	packet.clear();

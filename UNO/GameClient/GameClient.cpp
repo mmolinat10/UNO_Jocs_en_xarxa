@@ -11,10 +11,7 @@
 
 #define MAX_MESSAGES 25
 
-enum Commands {
-	Inicio_, Exit_, RepartirCartas_, Chat_
-};
-
+enum Command { Inicio_, Exit_, RepartirCartas_, Chat_ };
 enum Color { RED, YELLOW, GREEN, BLUE, NONE };
 enum Rank { NUMBER, SKIP, REVERSE, DRAW_TWO, WILD, WILD_D4 };
 enum Valid { VALID, INVALID };
@@ -39,7 +36,6 @@ sf::Packet& operator <<(sf::Packet& packet, const Valid& v) {
 	return packet << v;
 }
 
-
 sf::Packet& operator >>(sf::Packet& packet, Color& c) {
 	return packet >> c;
 }
@@ -47,6 +43,7 @@ sf::Packet& operator >>(sf::Packet& packet, Color& c) {
 sf::Packet& operator <<(sf::Packet& packet, const Card& c) {
 	return packet << c.color << c.number << c.rank << c.validity;
 }
+
 sf::Packet& operator >>(sf::Packet& packet, Card& c) {
 	return packet >> c;
 }
@@ -57,6 +54,7 @@ sf::Packet& operator <<(sf::Packet& packet, const Hand& h) {
 	}
 	return packet;
 }
+
 sf::Packet& operator >>(sf::Packet& packet, Hand& h) {
 	for (int i = 0; i < h.cards.size(); i++) {
 		packet >> h.cards[i];
@@ -68,7 +66,7 @@ sf::IpAddress ip = sf::IpAddress::getLocalAddress();
 sf::Socket::Status status;
 std::vector<std::string> aMessages;
 std::mutex mut;
-sf::Packet packetOut;
+sf::Packet packetSend;
 Player local;
 
 void ReceiveChat(std::string text);
@@ -83,20 +81,20 @@ int main() {
 	status = local.sock.connect(ip, 5000, sf::seconds(5.f));
 
 	if (status == sf::Socket::Done) {
-		std::cout << "Conectado al server " << ip << "\n";
-		packetOut << Commands::Inicio_ << local.name; ////LOS COMANDS SON PAR EL ENVIO Y RECEPCION DE PACKETS, NO TIENE QUE VER CON EL USUARIO
-		local.sock.send(packetOut);
-		packetOut.clear();
+		std::cout << "Conectado al server!" << std::endl;
+		packetSend << Command::Inicio_ << local.name; ////LOS COMANDS SON PAR EL ENVIO Y RECEPCION DE PACKETS, NO TIENE QUE VER CON EL USUARIO
+		local.sock.send(packetSend);
+		packetSend.clear();
 	}
 	else {
-		std::cout << "Fallo al conectar al server " << ip << "\n";
+		std::cout << "Fallo al conectar al server! " << std::endl;
 		system("pause");
 		exit(0);
 	}
 
 	sf::Vector2i screenDimensions(800, 600);
 	sf::RenderWindow window;
-	window.create(sf::VideoMode(screenDimensions.x, screenDimensions.y), ("Chat (" + local.name + ")"));
+	window.create(sf::VideoMode(screenDimensions.x, screenDimensions.y), ("Chat de " + local.name));
 
 	sf::Font font;
 	if (!font.loadFromFile("courbd.ttf")) 
@@ -136,19 +134,19 @@ int main() {
 						window.close();
 					else if (evento.key.code == sf::Keyboard::Return) {
 						///////////////////////////CONTROLAMOS LOS MENSAJES DEL CHAT/////////////////////////////////
-						//SEND
+						// SEND
 						mensaje.erase(0, 1);
 						if (mensaje == "exit") {
 							window.close();
 							continue;
 						}
 						mensaje = local.name + ": " + mensaje;
-						std::cout << "a" + mensaje.toAnsiString() << std::endl;
-						packetOut << Commands::Chat_ << mensaje.toAnsiString().c_str();
-						local.sock.send(packetOut);
-						packetOut.clear();
+						std::cout << mensaje.toAnsiString() << std::endl;
+						packetSend << Command::Chat_ << mensaje.toAnsiString().c_str();
+						local.sock.send(packetSend);
+						packetSend.clear();
 					
-						//SEND END
+						// SEND END
 						mensaje = ">";
 					}
 					break;
@@ -176,8 +174,9 @@ int main() {
 		window.display();
 		window.clear();
 	}
-	packetOut << Commands::Exit_;
-	local.sock.send(packetOut);
+
+	packetSend << Command::Exit_;
+	local.sock.send(packetSend);
 
 	// Cleanup
 	t.join(); 
@@ -193,21 +192,18 @@ void ReceiveChat(std::string text) {
 }
 
 void ReceiveUNO() {
-	sf::Packet packetIn;
-	std::string strRec;
-	int intRec;
-	int enumVar;
-	Commands com;
-	sf::Packet packetHand;
-
+	int intRec, enumVar;
+	sf::Packet packetReceive, packetHand;
+	Command command;
+	std::string receiveStr;
 
 	/////////////////////////////////////RECOGEMOS EL COMMAND QUE NOS HA ENVIADO EL SERVER////////////////////////////////////
 	do {
-		status = local.sock.receive(packetIn);
-		packetIn >> enumVar;
-		com = (Commands)enumVar;
+		status = local.sock.receive(packetReceive);
+		packetReceive >> enumVar;
+		command = (Command)enumVar;
 
-		switch (com) {
+		switch (command) {
 
 			case RepartirCartas_:
 				local.sock.receive(packetHand);
@@ -217,17 +213,20 @@ void ReceiveUNO() {
 				break;
 
 			case Chat_:
-				packetIn >> strRec;
-				ReceiveChat(strRec);
+				packetReceive >> receiveStr;
+				ReceiveChat(receiveStr);
 				break;
 
 			default:
 				break;
 		}
+
 		// Clean
-		packetIn.clear();
-		packetOut.clear();
+		packetReceive.clear();
+		packetSend.clear();
+
 	} while (status == sf::Socket::Done);
+
 	if (status == sf::Socket::Disconnected) 
-		ReceiveChat("Se ha perdido la conexion con el servidor");
+		ReceiveChat("Se ha perdido la conexion con el servidor!\n");
 }
